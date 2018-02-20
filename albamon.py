@@ -35,16 +35,19 @@ if __name__ == "__main__": # 직접실행시키는 경우
         query = lines[1].split(':')[-1].strip()
         standDate = lines[2].split(':')[-1].strip()
         print(">>> 설정 파일 불러오기 성공 ")
+    last = int(input(">>> *만약 임시저장으로 끊겼으면 엑셀마지막왼쪽의 행번호를 입력 (처음시작은 0):"))
     baseurl = 'http://www.albamon.com'
     headers = {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
-    html = requests.get('http://www.albamon.com/search/Recruit?Keyword='+query+'&IsExcludeDuplication=True&PageSize=1000&OrderType=1', headers=headers)
+    html = requests.get('http://www.albamon.com/search/Recruit?Keyword='+query+'&IsExcludeDuplication=True&PageSize=5000&OrderType=1', headers=headers,timeout=20)
+
+    #time.sleep(10)
     bs4 = BeautifulSoup(html.text,'lxml')
     total = bs4.find('span',class_='total').find('em').get_text().strip()
     print(">>> 총 ",total,"개 게시글 존재 ")
-    divs = bs4.find_all('div',class_='booth')
+    divs = bs4.find('div',class_='smResult').find_all('div',class_='booth')
     alist = []
-    for div in divs:
+    for div in divs[last-1:]:
         href  = 'http://www.albamon.com'+div.find('dt').find('a')['href']
         dateday = div.find('span',class_='regTime').get_text().strip()
         if dateday == '' or dateday >= standDate:
@@ -54,28 +57,41 @@ if __name__ == "__main__": # 직접실행시키는 경우
     print(">>> 조건에 맞는 ", len(alist), "개 게시글 필터링 ")
     alistidx = 1
     datalist = []
-    for a in alist:
-        tmplist = []
-        driver.get(a)
-        time.sleep(random.randint(5,8))
-        try:
-            driver.find_element_by_xpath('//*[@id="allcontent"]/div[2]/div[5]/div[1]/div/a').click()
-        except:
-            pass
-        print(">>> ",alistidx,'번째 추출중..')
-        bs42 = BeautifulSoup(driver.page_source,'lxml')
-        title = bs42.find('span',class_='companyName').get_text().strip()
-        try:
-            driver.switch_to_frame(driver.find_elements_by_tag_name('iframe')[3])
-            name = driver.find_element_by_xpath('/html/body/div/div[1]/span[2]').text
-            email = driver.find_element_by_xpath('/html/body/div/div[2]/span[2]/a').text
-            phone = driver.find_element_by_xpath('/html/body/div/div[3]/span[2]/div/span').text
-        except:
-            input("!!! 캡챠 발생 정지 !!! 캡챠를 푼후 엔터키를 눌러주세요 ::")
-            driver.switch_to_frame(driver.find_elements_by_tag_name('iframe')[3])
-            name = driver.find_element_by_xpath('/html/body/div/div[1]/span[2]').text
-            email = driver.find_element_by_xpath('/html/body/div/div[2]/span[2]/a').text
-            phone = driver.find_element_by_xpath('/html/body/div/div[3]/span[2]/div/span').text
-        alistidx+=1
-        datalist.append([title,name,email,phone,a])
-    saveExcel(datalist)
+    try:
+        for a in alist:
+            tmplist = []
+            driver.get(a)
+            time.sleep(random.randint(5,8))
+            try:
+                driver.find_element_by_xpath('//*[@id="allcontent"]/div[2]/div[5]/div[1]/div/a').click()
+            except:
+                pass
+            print(">>> ",alistidx,'번째 추출중..')
+            bs42 = BeautifulSoup(driver.page_source,'lxml')
+            try:
+                title = bs42.find('span',class_='companyName').get_text().strip()
+            except:
+                input("!!! 캡챠 발생 정지 !!! 캡챠를 푼후 엔터키를 눌러주세요 ::")
+                time.sleep(2)
+                bs42 = BeautifulSoup(driver.page_source, 'lxml')
+                title = bs42.find('span', class_='companyName').get_text().strip()
+            try:
+                driver.switch_to_frame(driver.find_elements_by_tag_name('iframe')[3])
+                name = driver.find_element_by_xpath('/html/body/div/div[1]/span[2]').text
+                email = driver.find_element_by_xpath('/html/body/div/div[2]/span[2]/a').text
+                phone = driver.find_element_by_xpath('/html/body/div/div[3]/span[2]/div/span').text
+            except:
+                input("!!! 캡챠 발생 정지 !!! 캡챠를 푼후 엔터키를 눌러주세요 ::")
+                time.sleep(2)
+                driver.switch_to_frame(driver.find_elements_by_tag_name('iframe')[3])
+                name = driver.find_element_by_xpath('/html/body/div/div[1]/span[2]').text
+                email = driver.find_element_by_xpath('/html/body/div/div[2]/span[2]/a').text
+                phone = driver.find_element_by_xpath('/html/body/div/div[3]/span[2]/div/span').text
+            alistidx+=1
+            datalist.append([title,name,email,phone,a])
+        saveExcel(datalist)
+    except:
+        print("엑셀 임시저장")
+        saveExcel(datalist)
+    finally:
+        driver.quit()
