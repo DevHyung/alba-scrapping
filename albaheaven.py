@@ -11,7 +11,6 @@ def saveExcel(data):
     """
     :param query: naver 쇼핑물에 query 한걸로 파일명 을 만들꺼
     :param data:  크롤링한 결과물
-    :return:  NONE
     """
     # 엑셀시트 header 설정 및, 열의 넓이 설정
     header1 = ['상호명','TEL','HP','url']
